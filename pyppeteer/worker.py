@@ -72,30 +72,30 @@ class Worker(EventEmitter):
             lambda exception: exceptionThrown(exception['exceptionDetails']),
         )
 
-    def _executionContextCallback(self, value: ExecutionContext) -> None:
-        self._executionContextPromise.set_result(value)
+    # def _executionContextCallback(self, value: ExecutionContext) -> None:
+    #     self._executionContextPromise.set_result(value)
 
-    @property
-    def url(self) -> str:
-        """Return URL."""
-        return self._url
+    # @property
+    # def url(self) -> str:
+    #     """Return URL."""
+    #     return self._url
 
-    async def executionContext(self) -> ExecutionContext:
-        """Return ExecutionContext."""
-        return await self._executionContextPromise
+    # async def executionContext(self) -> ExecutionContext:
+    #     """Return ExecutionContext."""
+    #     return await self._executionContextPromise
 
-    async def evaluate(self, pageFunction: str, *args: Any) -> Any:
-        """Evaluate ``pageFunction`` with ``args``.
+    # async def evaluate(self, pageFunction: str, *args: Any) -> Any:
+    #     """Evaluate ``pageFunction`` with ``args``.
+    #
+    #     Shortcut for ``(await worker.executionContext).evaluate(pageFunction, *args)``.
+    #     """  # noqa: E501
+    #     return await (await self._executionContextPromise).evaluate(
+    #         pageFunction, *args)
 
-        Shortcut for ``(await worker.executionContext).evaluate(pageFunction, *args)``.
-        """  # noqa: E501
-        return await (await self._executionContextPromise).evaluate(
-            pageFunction, *args)
-
-    async def evaluateHandle(self, pageFunction: str, *args: Any) -> JSHandle:
-        """Evaluate ``pageFunction`` with ``args`` and return :class:`~pyppeteer.execution_context.JSHandle`.
-
-        Shortcut for ``(await worker.executionContext).evaluateHandle(pageFunction, *args)``.
-        """  # noqa: E501
-        return await (await self._executionContextPromise).evaluateHandle(
-            pageFunction, *args)
+    # async def evaluateHandle(self, pageFunction: str, *args: Any) -> JSHandle:
+    #     """Evaluate ``pageFunction`` with ``args`` and return :class:`~pyppeteer.execution_context.JSHandle`.
+    #
+    #     Shortcut for ``(await worker.executionContext).evaluateHandle(pageFunction, *args)``.
+    #     """  # noqa: E501
+    #     return await (await self._executionContextPromise).evaluateHandle(
+    #         pageFunction, *args)

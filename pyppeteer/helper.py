@@ -3,8 +3,8 @@
 
 """Helper functions."""
 
-import asyncio
-import json
+# import asyncio
+# import json
 import logging
 import math
 from typing import Any, Awaitable, Callable, Dict, List
@@ -12,10 +12,10 @@ from typing import Any, Awaitable, Callable, Dict, List
 from pyee import EventEmitter
 
 import pyppeteer
-from pyppeteer.connection import CDPSession
+# from pyppeteer.connection import CDPSession
 from pyppeteer.errors import ElementHandleError, TimeoutError
 
-logger = logging.getLogger(__name__)
+# logger = logging.getLogger(__name__)
 
 
 def debugError(_logger: logging.Logger, msg: Any) -> None:
@@ -26,32 +26,32 @@ def debugError(_logger: logging.Logger, msg: Any) -> None:
         _logger.debug(msg)
 
 
-def evaluationString(fun: str, *args: Any) -> str:
-    """Convert function and arguments to str."""
-    _args = ', '.join([
-        json.dumps('undefined' if arg is None else arg) for arg in args
-    ])
-    expr = f'({fun})({_args})'
-    return expr
-
-
-def getExceptionMessage(exceptionDetails: dict) -> str:
-    """Get exception message from `exceptionDetails` object."""
-    exception = exceptionDetails.get('exception')
-    if exception:
-        return exception.get('description') or exception.get('value')
-    message = exceptionDetails.get('text', '')
-    stackTrace = exceptionDetails.get('stackTrace', dict())
-    if stackTrace:
-        for callframe in stackTrace.get('callFrames'):
-            location = (
-                str(callframe.get('url', '')) + ':' +
-                str(callframe.get('lineNumber', '')) + ':' +
-                str(callframe.get('columnNumber'))
-            )
-            functionName = callframe.get('functionName', '<anonymous>')
-            message = message + f'\n    at {functionName} ({location})'
-    return message
+# def evaluationString(fun: str, *args: Any) -> str:
+#     """Convert function and arguments to str."""
+#     _args = ', '.join([
+#         json.dumps('undefined' if arg is None else arg) for arg in args
+#     ])
+#     expr = f'({fun})({_args})'
+#     return expr
+#
+#
+# def getExceptionMessage(exceptionDetails: dict) -> str:
+#     """Get exception message from `exceptionDetails` object."""
+#     exception = exceptionDetails.get('exception')
+#     if exception:
+#         return exception.get('description') or exception.get('value')
+#     message = exceptionDetails.get('text', '')
+#     stackTrace = exceptionDetails.get('stackTrace', dict())
+#     if stackTrace:
+#         for callframe in stackTrace.get('callFrames'):
+#             location = (
+#                 str(callframe.get('url', '')) + ':' +
+#                 str(callframe.get('lineNumber', '')) + ':' +
+#                 str(callframe.get('columnNumber'))
+#             )
+#             functionName = callframe.get('functionName', '<anonymous>')
+#             message = message + f'\n    at {functionName} ({location})'
+#     return message
 
 
 def addEventListener(emitter: EventEmitter, eventName: str, handler: Callable
@@ -71,13 +71,13 @@ def removeEventListeners(listeners: List[dict]) -> None:
     listeners.clear()
 
 
-unserializableValueMap = {
-    '-0': -0,
-    'NaN': None,
-    None: None,
-    'Infinity': math.inf,
-    '-Infinity': -math.inf,
-}
+# unserializableValueMap = {
+#     '-0': -0,
+#     'NaN': None,
+#     None: None,
+#     'Infinity': math.inf,
+#     '-Infinity': -math.inf,
+# }
 
 
 def valueFromRemoteObject(remoteObject: Dict) -> Any:
@@ -100,58 +100,58 @@ def valueFromRemoteObject(remoteObject: Dict) -> Any:
     return remoteObject.get('value')
 
 
-def releaseObject(client: CDPSession, remoteObject: dict
-                  ) -> Awaitable:
-    """Release remote object."""
-    objectId = remoteObject.get('objectId')
-    fut_none = client._loop.create_future()
-    fut_none.set_result(None)
-    if not objectId:
-        return fut_none
-    try:
-        return client.send('Runtime.releaseObject', {
-            'objectId': objectId
-        })
-    except Exception as e:
-        # Exceptions might happen in case of a page been navigated or closed.
-        # Swallow these since they are harmless and we don't leak anything in this case.  # noqa
-        debugError(logger, e)
-    return fut_none
-
-
-def waitForEvent(emitter: EventEmitter, eventName: str,  # noqa: C901
-                 predicate: Callable[[Any], bool], timeout: float,
-                 loop: asyncio.AbstractEventLoop) -> Awaitable:
-    """Wait for an event emitted from the emitter."""
-    promise = loop.create_future()
-
-    def resolveCallback(target: Any) -> None:
-        promise.set_result(target)
-
-    def rejectCallback(exception: Exception) -> None:
-        promise.set_exception(exception)
-
-    async def timeoutTimer() -> None:
-        await asyncio.sleep(timeout / 1000)
-        rejectCallback(
-            TimeoutError('Timeout exceeded while waiting for event'))
-
-    def _listener(target: Any) -> None:
-        if not predicate(target):
-            return
-        cleanup()
-        resolveCallback(target)
-
-    listener = addEventListener(emitter, eventName, _listener)
-    if timeout:
-        eventTimeout = loop.create_task(timeoutTimer())
-
-    def cleanup() -> None:
-        removeEventListeners([listener])
-        if timeout:
-            eventTimeout.cancel()
-
-    return promise
+# def releaseObject(client: CDPSession, remoteObject: dict
+#                   ) -> Awaitable:
+#     """Release remote object."""
+#     objectId = remoteObject.get('objectId')
+#     fut_none = client._loop.create_future()
+#     fut_none.set_result(None)
+#     if not objectId:
+#         return fut_none
+#     try:
+#         return client.send('Runtime.releaseObject', {
+#             'objectId': objectId
+#         })
+#     except Exception as e:
+#         # Exceptions might happen in case of a page been navigated or closed.
+#         # Swallow these since they are harmless and we don't leak anything in this case.  # noqa
+#         debugError(logger, e)
+#     return fut_none
+#
+#
+# def waitForEvent(emitter: EventEmitter, eventName: str,  # noqa: C901
+#                  predicate: Callable[[Any], bool], timeout: float,
+#                  loop: asyncio.AbstractEventLoop) -> Awaitable:
+#     """Wait for an event emitted from the emitter."""
+#     promise = loop.create_future()
+#
+#     def resolveCallback(target: Any) -> None:
+#         promise.set_result(target)
+#
+#     def rejectCallback(exception: Exception) -> None:
+#         promise.set_exception(exception)
+#
+#     async def timeoutTimer() -> None:
+#         await asyncio.sleep(timeout / 1000)
+#         rejectCallback(
+#             TimeoutError('Timeout exceeded while waiting for event'))
+#
+#     def _listener(target: Any) -> None:
+#         if not predicate(target):
+#             return
+#         cleanup()
+#         resolveCallback(target)
+#
+#     listener = addEventListener(emitter, eventName, _listener)
+#     if timeout:
+#         eventTimeout = loop.create_task(timeoutTimer())
+#
+#     def cleanup() -> None:
+#         removeEventListeners([listener])
+#         if timeout:
+#             eventTimeout.cancel()
+#
+#     return promise
 
 
 def get_positive_int(obj: dict, name: str) -> int:

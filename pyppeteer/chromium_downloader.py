@@ -12,6 +12,7 @@ import sys
 from zipfile import ZipFile
 
 import urllib3
+import ssl
 from tqdm import tqdm
 
 from pyppeteer import __chromium_revision__, __pyppeteer_home__
@@ -26,10 +27,6 @@ BASE_URL = f'{DOWNLOAD_HOST}/chromium-browser-snapshots'
 
 REVISION = os.environ.get(
     'PYPPETEER_CHROMIUM_REVISION', __chromium_revision__)
-
-NO_PROGRESS_BAR = os.environ.get('PYPPETEER_NO_PROGRESS_BAR', '')
-if NO_PROGRESS_BAR.lower() in ('1', 'true'):
-    NO_PROGRESS_BAR = True  # type: ignore
 
 downloadURLs = {
     'linux': f'{BASE_URL}/Linux_x64/{REVISION}/chrome-linux.zip',
@@ -79,6 +76,7 @@ def download_zip(url: str) -> BytesIO:
     with urllib3.PoolManager() as http:
         # Get data from url.
         # set preload_content=False means using stream later.
+
         data = http.request('GET', url, preload_content=False)
 
         try:
@@ -86,10 +84,7 @@ def download_zip(url: str) -> BytesIO:
         except (KeyError, ValueError, AttributeError):
             total_length = 0
 
-        process_bar = tqdm(
-            total=total_length,
-            file=os.devnull if NO_PROGRESS_BAR else None,
-        )
+        process_bar = tqdm(total=total_length)
 
         # 10 * 1024
         _data = BytesIO()

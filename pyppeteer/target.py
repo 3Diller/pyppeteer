@@ -19,7 +19,7 @@ class Target(object):
 
     def __init__(self, targetInfo: Dict, browserContext: 'BrowserContext',
                  sessionFactory: Callable[[], Coroutine[Any, Any, CDPSession]],
-                 ignoreHTTPSErrors: bool, defaultViewport: Optional[Dict],
+                 ignoreHTTPSErrors: bool, setDefaultViewport: bool,
                  screenshotTaskQueue: List, loop: asyncio.AbstractEventLoop
                  ) -> None:
         self._targetInfo = targetInfo
@@ -27,7 +27,7 @@ class Target(object):
         self._targetId = targetInfo.get('targetId', '')
         self._sessionFactory = sessionFactory
         self._ignoreHTTPSErrors = ignoreHTTPSErrors
-        self._defaultViewport = defaultViewport
+        self._setDefaultViewport = setDefaultViewport
         self._screenshotTaskQueue = screenshotTaskQueue
         self._loop = loop
         self._page: Optional[Page] = None
@@ -64,18 +64,20 @@ class Target(object):
             new_page = await Page.create(
                 client, self,
                 self._ignoreHTTPSErrors,
-                self._defaultViewport,
+                self._setDefaultViewport,
                 self._screenshotTaskQueue,
             )
             self._page = new_page
             return new_page
         return self._page
 
+    # don't delete: is depends
     @property
     def url(self) -> str:
         """Get url of this target."""
         return self._targetInfo['url']
 
+    # don't delete: is depends
     @property
     def type(self) -> str:
         """Get type of this target.
@@ -88,27 +90,28 @@ class Target(object):
             return _type
         return 'other'
 
-    @property
-    def browser(self) -> 'Browser':
-        """Get the browser the target belongs to."""
-        return self._browserContext.browser
+    # @property
+    # def browser(self) -> 'Browser':
+    #     """Get the browser the target belongs to."""
+    #     return self._browserContext.browser
 
-    @property
-    def browserContext(self) -> 'BrowserContext':
-        """Return the browser context the target belongs to."""
-        return self._browserContext
+    # @property
+    # def browserContext(self) -> 'BrowserContext':
+    #     """Return the browser context the target belongs to."""
+    #     return self._browserContext
 
-    @property
-    def opener(self) -> Optional['Target']:
-        """Get the target that opened this target.
+    # @property
+    # def opener(self) -> Optional['Target']:
+    #     """Get the target that opened this target.
+    #
+    #     Top-level targets return ``None``.
+    #     """
+    #     openerId = self._targetInfo.get('openerId')
+    #     if openerId is None:
+    #         return None
+    #     return self.browser._targets.get(openerId)
 
-        Top-level targets return ``None``.
-        """
-        openerId = self._targetInfo.get('openerId')
-        if openerId is None:
-            return None
-        return self.browser._targets.get(openerId)
-
+    # don't delete: is depends
     def _targetInfoChanged(self, targetInfo: Dict) -> None:
         self._targetInfo = targetInfo
 

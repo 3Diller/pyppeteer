@@ -34,13 +34,13 @@ class Browser(EventEmitter):
     )
 
     def __init__(self, connection: Connection, contextIds: List[str],
-                 ignoreHTTPSErrors: bool, defaultViewport: Optional[Dict],
+                 ignoreHTTPSErrors: bool, setDefaultViewport: bool,
                  process: Optional[Popen] = None,
                  closeCallback: Callable[[], Awaitable[None]] = None,
                  **kwargs: Any) -> None:
         super().__init__()
         self._ignoreHTTPSErrors = ignoreHTTPSErrors
-        self._defaultViewport = defaultViewport
+        self._setDefaultViewport = setDefaultViewport
         self._process = process
         self._screenshotTaskQueue: List = []
         self._connection = connection
@@ -68,75 +68,77 @@ class Browser(EventEmitter):
         self._connection.on('Target.targetDestroyed', self._targetDestroyed)
         self._connection.on('Target.targetInfoChanged', self._targetInfoChanged)  # noqa: E501
 
-    @property
-    def process(self) -> Optional[Popen]:
-        """Return process of this browser.
+    # @property
+    # def process(self) -> Optional[Popen]:
+    #     """Return process of this browser.
+    #
+    #     If browser instance is created by :func:`pyppeteer.launcher.connect`,
+    #     return ``None``.
+    #     """
+    #     return self._process
 
-        If browser instance is created by :func:`pyppeteer.launcher.connect`,
-        return ``None``.
-        """
-        return self._process
+    # async def createIncogniteBrowserContext(self) -> 'BrowserContext':
+    #     """[Deprecated] Miss spelled method.
+    #
+    #     Use :meth:`createIncognitoBrowserContext` method instead.
+    #     """
+    #     logger.warning(
+    #         'createIncogniteBrowserContext is deprecated. '
+    #         'Use createIncognitoBrowserContext instead.'
+    #     )
+    #     return await self.createIncognitoBrowserContext()
 
-    async def createIncogniteBrowserContext(self) -> 'BrowserContext':
-        """[Deprecated] Miss spelled method.
+    # async def createIncognitoBrowserContext(self) -> 'BrowserContext':
+    #     """Create a new incognito browser context.
+    #
+    #     This won't share cookies/cache with other browser contexts.
+    #
+    #     .. code::
+    #
+    #         browser = await launch()
+    #         # Create a new incognito browser context.
+    #         context = await browser.createIncognitoBrowserContext()
+    #         # Create a new page in a pristine context.
+    #         page = await context.newPage()
+    #         # Do stuff
+    #         await page.goto('https://example.com')
+    #         ...
+    #     """
+    #     obj = await self._connection.send('Target.createBrowserContext')
+    #     browserContextId = obj['browserContextId']
+    #     context = BrowserContext(self, browserContextId)  # noqa: E501
+    #     self._contexts[browserContextId] = context
+    #     return context
 
-        Use :meth:`createIncognitoBrowserContext` method instead.
-        """
-        logger.warning(
-            'createIncogniteBrowserContext is deprecated. '
-            'Use createIncognitoBrowserContext instead.'
-        )
-        return await self.createIncognitoBrowserContext()
+    # @property
+    # def browserContexts(self) -> List['BrowserContext']:
+    #     """Return a list of all open browser contexts.
+    #
+    #     In a newly created browser, this will return a single instance of
+    #     ``[BrowserContext]``
+    #     """
+    #     return [self._defaultContext] + [context for context in self._contexts.values()]  # noqa: E501
 
-    async def createIncognitoBrowserContext(self) -> 'BrowserContext':
-        """Create a new incognito browser context.
+    # async def _disposeContext(self, contextId: str) -> None:
+    #     await self._connection.send('Target.disposeBrowserContext', {
+    #         'browserContextId': contextId,
+    #     })
+    #     self._contexts.pop(contextId, None)
 
-        This won't share cookies/cache with other browser contexts.
-
-        .. code::
-
-            browser = await launch()
-            # Create a new incognito browser context.
-            context = await browser.createIncognitoBrowserContext()
-            # Create a new page in a pristine context.
-            page = await context.newPage()
-            # Do stuff
-            await page.goto('https://example.com')
-            ...
-        """
-        obj = await self._connection.send('Target.createBrowserContext')
-        browserContextId = obj['browserContextId']
-        context = BrowserContext(self, browserContextId)  # noqa: E501
-        self._contexts[browserContextId] = context
-        return context
-
-    @property
-    def browserContexts(self) -> List['BrowserContext']:
-        """Return a list of all open browser contexts.
-
-        In a newly created browser, this will return a single instance of
-        ``[BrowserContext]``
-        """
-        return [self._defaultContext] + [context for context in self._contexts.values()]  # noqa: E501
-
-    async def _disposeContext(self, contextId: str) -> None:
-        await self._connection.send('Target.disposeBrowserContext', {
-            'browserContextId': contextId,
-        })
-        self._contexts.pop(contextId, None)
-
+    # don't delete: is used
     @staticmethod
     async def create(connection: Connection, contextIds: List[str],
-                     ignoreHTTPSErrors: bool, defaultViewport: Optional[Dict],
+                     ignoreHTTPSErrors: bool, appMode: bool,
                      process: Optional[Popen] = None,
                      closeCallback: Callable[[], Awaitable[None]] = None,
                      **kwargs: Any) -> 'Browser':
         """Create browser object."""
-        browser = Browser(connection, contextIds, ignoreHTTPSErrors,
-                          defaultViewport, process, closeCallback)
+        browser = Browser(connection, contextIds, ignoreHTTPSErrors, appMode,
+                          process, closeCallback)
         await connection.send('Target.setDiscoverTargets', {'discover': True})
         return browser
 
+    # don't delete: is depends
     async def _targetCreated(self, event: Dict) -> None:
         targetInfo = event['targetInfo']
         browserContextId = targetInfo.get('browserContextId')
@@ -151,7 +153,7 @@ class Browser(EventEmitter):
             context,
             lambda: self._connection.createSession(targetInfo),
             self._ignoreHTTPSErrors,
-            self._defaultViewport,
+            self._setDefaultViewport,
             self._screenshotTaskQueue,
             self._connection._loop,
         )
@@ -162,6 +164,7 @@ class Browser(EventEmitter):
             self.emit(Browser.Events.TargetCreated, target)
             context.emit(BrowserContext.Events.TargetCreated, target)
 
+    # don't delete: is depends
     async def _targetDestroyed(self, event: Dict) -> None:
         target = self._targets[event['targetId']]
         del self._targets[event['targetId']]
@@ -171,6 +174,7 @@ class Browser(EventEmitter):
             target.browserContext.emit(BrowserContext.Events.TargetDestroyed, target)  # noqa: E501
         target._initializedCallback(False)
 
+    # don't delete: is depends
     async def _targetInfoChanged(self, event: Dict) -> None:
         target = self._targets.get(event['targetInfo']['targetId'])
         if not target:
@@ -182,15 +186,17 @@ class Browser(EventEmitter):
             self.emit(Browser.Events.TargetChanged, target)
             target.browserContext.emit(BrowserContext.Events.TargetChanged, target)  # noqa: E501
 
-    @property
-    def wsEndpoint(self) -> str:
-        """Return websocket end point url."""
-        return self._connection.url
+    # @property
+    # def wsEndpoint(self) -> str:
+    #     """Return websocket end point url."""
+    #     return self._connection.url
 
+    # don't delete: is used
     async def newPage(self) -> Page:
         """Make new page on this browser and return its object."""
         return await self._defaultContext.newPage()
 
+    # don't delete: is depends
     async def _createPageInContext(self, contextId: Optional[str]) -> Page:
         options = {'url': 'about:blank'}
         if contextId:
@@ -208,6 +214,7 @@ class Browser(EventEmitter):
             raise BrowserError('Failed to create page.')
         return page
 
+    # don't delete: is depends
     def targets(self) -> List[Target]:
         """Get a list of all active targets inside the browser.
 
@@ -217,46 +224,45 @@ class Browser(EventEmitter):
         return [target for target in self._targets.values()
                 if target._isInitialized]
 
-    async def pages(self) -> List[Page]:
-        """Get all pages of this browser.
+    # async def pages(self) -> List[Page]:
+    #     """Get all pages of this browser.
+    #
+    #     Non visible pages, such as ``"background_page"``, will not be listed
+    #     here. You can find then using :meth:`pyppeteer.target.Target.page`.
+    #     """
+    #     pages = []
+    #     for target in self.targets():
+    #         if target.type == 'page':
+    #             page = await target.page()
+    #             if page:
+    #                 pages.append(page)
+    #     return pages
 
-        Non visible pages, such as ``"background_page"``, will not be listed
-        here. You can find then using :meth:`pyppeteer.target.Target.page`.
+    # async def version(self) -> str:
+    #     """Get version of the browser."""
+    #     version = await self._getVersion()
+    #     return version['product']
 
-        In case of multiple browser contexts, this method will return a list
-        with all the pages in all browser contexts.
-        """
-        # Using asyncio.gather is better for performance
-        pages: List[Page] = list()
-        for context in self.browserContexts:
-            pages.extend(await context.pages())
-        return pages
-
-    async def version(self) -> str:
-        """Get version of the browser."""
-        version = await self._getVersion()
-        return version['product']
-
-    async def userAgent(self) -> str:
-        """Return browser's original user agent.
-
-        .. note::
-            Pages can override browser user agent with
-            :meth:`pyppeteer.page.Page.setUserAgent`.
-        """
-        version = await self._getVersion()
-        return version.get('userAgent', '')
+    # async def userAgent(self) -> str:
+    #     """Return browser's original user agent.
+    #
+    #     .. note::
+    #         Pages can override browser user agent with
+    #         :meth:`pyppeteer.page.Page.setUserAgent`.
+    #     """
+    #     version = await self._getVersion()
+    #     return version.get('userAgent', '')
 
     async def close(self) -> None:
         """Close connections and terminate browser process."""
         await self._closeCallback()  # Launcher.killChrome()
 
-    async def disconnect(self) -> None:
-        """Disconnect browser."""
-        await self._connection.dispose()
+    # async def disconnect(self) -> None:
+    #     """Disconnect browser."""
+    #     await self._connection.dispose()
 
-    def _getVersion(self) -> Awaitable:
-        return self._connection.send('Browser.getVersion')
+    # def _getVersion(self) -> Awaitable:
+    #     return self._connection.send('Browser.getVersion')
 
 
 class BrowserContext(EventEmitter):
@@ -296,59 +302,46 @@ class BrowserContext(EventEmitter):
         self._browser = browser
         self._id = contextId
 
-    def targets(self) -> List[Target]:
-        """Return a list of all active targets inside the browser context."""
-        targets = []
-        for target in self._browser.targets():
-            if target.browserContext == self:
-                targets.append(target)
-        return targets
+    # def targets(self) -> List[Target]:
+    #     """Return a list of all active targets inside the browser context."""
+    #     targets = []
+    #     for target in self._browser.targets():
+    #         if target.browserContext == self:
+    #             targets.append(target)
+    #     return targets
 
-    async def pages(self) -> List[Page]:
-        """Return list of all open pages.
+    # def isIncognite(self) -> bool:
+    #     """[Deprecated] Miss spelled method.
+    #
+    #     Use :meth:`isIncognito` method instead.
+    #     """
+    #     logger.warning(
+    #         'isIncognite is deprecated. '
+    #         'Use isIncognito instead.'
+    #     )
+    #     return self.isIncognito()
+    #
+    # def isIncognito(self) -> bool:
+    #     """Return whether BrowserContext is incognito.
+    #
+    #     The default browser context is the only non-incognito browser context.
+    #
+    #     .. note::
+    #         The default browser context cannot be closed.
+    #     """
+    #     return bool(self._id)
 
-        Non-visible pages, such as ``"background_page"``, will not be listed
-        here. You can find them using :meth:`pyppeteer.target.Target.page`.
-        """
-        # Using asyncio.gather is better for performance
-        pages = []
-        for target in self.targets():
-            if target.type == 'page':
-                page = await target.page()
-                if page:
-                    pages.append(page)
-        return pages
-
-    def isIncognite(self) -> bool:
-        """[Deprecated] Miss spelled method.
-
-        Use :meth:`isIncognito` method instead.
-        """
-        logger.warning(
-            'isIncognite is deprecated. '
-            'Use isIncognito instead.'
-        )
-        return self.isIncognito()
-
-    def isIncognito(self) -> bool:
-        """Return whether BrowserContext is incognito.
-
-        The default browser context is the only non-incognito browser context.
-
-        .. note::
-            The default browser context cannot be closed.
-        """
-        return bool(self._id)
-
+    # don't delete: is depends
     async def newPage(self) -> Page:
         """Create a new page in the browser context."""
         return await self._browser._createPageInContext(self._id)
 
-    @property
-    def browser(self) -> Browser:
-        """Return the browser this browser context belongs to."""
-        return self._browser
+    # @property
+    # def browser(self) -> Browser:
+    #     """Return the browser this browser context belongs to."""
+    #     return self._browser
 
+    # don't delete: is depends
     async def close(self) -> None:
         """Close the browser context.
 
